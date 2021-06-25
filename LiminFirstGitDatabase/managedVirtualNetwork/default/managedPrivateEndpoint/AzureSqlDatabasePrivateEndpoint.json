@@ -1,0 +1,10 @@
+{
+	"name": "AzureSqlDatabasePrivateEndpoint",
+	"properties": {
+		"privateLinkResourceId": "/subscriptions/abedd7a7-07e1-4757-bad3-fb481f4bf0b3/resourceGroups/LiminRG/providers/Microsoft.Sql/servers/liminsqlserver1124",
+		"groupId": "sqlServer",
+		"fqdns": [
+			"liminsqlserver1124.database.windows.net"
+		]
+	}
+}
