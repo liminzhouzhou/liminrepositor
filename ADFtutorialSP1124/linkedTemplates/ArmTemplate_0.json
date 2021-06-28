@@ -269,7 +269,7 @@
 							"value": "@pipeline().parameters.sinkBlobContainer",
 							"type": "Expression"
 						},
-						"container": "adfv2branch"
+						"container": "adftutorial"
 					},
 					"columnDelimiter": ",",
 					"escapeChar": "\\",
@@ -326,12 +326,9 @@
 				"typeProperties": {
 					"location": {
 						"type": "AzureBlobStorageLocation",
-						"fileName": "emp.txt",
-						"folderPath": {
-							"value": "@pipeline().parameters.sourceBlobContainer",
-							"type": "Expression"
-						},
-						"container": "adftutorial"
+						"fileName": "input.txt",
+						"folderPath": "input",
+						"container": "adfv2branch"
 					},
 					"columnDelimiter": ",",
 					"escapeChar": "\\",
@@ -587,13 +584,16 @@
 				],
 				"parameters": {
 					"sourceBlobContainer": {
-						"type": "string"
+						"type": "string",
+						"defaultValue": "adftutorial/adfv2branch/input"
 					},
 					"sinkBlobContainer": {
-						"type": "string"
+						"type": "string",
+						"defaultValue": "adftutorial/adfv2branch/output"
 					},
 					"receiver": {
-						"type": "string"
+						"type": "string",
+						"defaultValue": "t-liminzhou@microsoft.com"
 					}
 				},
 				"annotations": []
