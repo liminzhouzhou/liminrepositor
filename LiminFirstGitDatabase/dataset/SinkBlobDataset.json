@@ -17,7 +17,8 @@
 				"folderPath": {
 					"value": "@pipeline().parameters.sinkBlobContainer",
 					"type": "Expression"
-				}
+				},
+				"container": "adftutorial"
 			},
 			"columnDelimiter": ",",
 			"escapeChar": "\\",
