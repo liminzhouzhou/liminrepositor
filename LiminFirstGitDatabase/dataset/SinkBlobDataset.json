@@ -1,5 +1,5 @@
 {
-	"name": "SourceBlobDataset",
+	"name": "SinkBlobDataset",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "AzureStorageLinkedService",
@@ -10,26 +10,20 @@
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobStorageLocation",
-				"fileName": "emp.txt",
-				"folderPath": {
-					"value": "@pipeline().parameters.sourceBlobContainer",
+				"fileName": {
+					"value": "@CONCAT(pipeline().RunId, '.txt')",
 					"type": "Expression"
 				},
-				"container": "adftutorial"
+				"folderPath": {
+					"value": "@pipeline().parameters.sinkBlobContainer",
+					"type": "Expression"
+				},
+				"container": "adfv2branch"
 			},
 			"columnDelimiter": ",",
 			"escapeChar": "\\",
-			"firstRowAsHeader": true,
 			"quoteChar": "\""
 		},
-		"schema": [
-			{
-				"type": "String"
-			},
-			{
-				"type": "String"
-			}
-		]
-	},
-	"type": "Microsoft.DataFactory/factories/datasets"
+		"schema": []
+	}
 }
