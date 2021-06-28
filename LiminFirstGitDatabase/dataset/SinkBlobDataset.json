@@ -10,14 +10,7 @@
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobStorageLocation",
-				"fileName": {
-					"value": "@CONCAT(pipeline().RunId, '.txt')",
-					"type": "Expression"
-				},
-				"folderPath": {
-					"value": "@pipeline().parameters.sinkBlobContainer",
-					"type": "Expression"
-				},
+				"folderPath": "output",
 				"container": "adftutorial"
 			},
 			"columnDelimiter": ",",
