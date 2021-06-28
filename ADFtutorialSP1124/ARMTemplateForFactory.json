@@ -1,0 +1,1107 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "ADFtutorialSP1124"
+		},
+		"AzureSqlDWLinkedService_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSqlDWLinkedService'"
+		},
+		"AzureSqlDatabaseLinkedService_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureSqlDatabaseLinkedService'"
+		},
+		"AzureStorageLinkedService_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AzureStorageLinkedService'"
+		},
+		"VNetAzureSqlDatabaseLinkedService_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'VNetAzureSqlDatabaseLinkedService'"
+		},
+		"VNetAzureStorageLinkedService_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'VNetAzureStorageLinkedService'"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/ControlFlow')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy data1",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobStorageWriteSettings"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "SourceBlobDataset",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "SinkBlobDataset",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "SendSuccessEmailActivity",
+						"type": "WebActivity",
+						"dependsOn": [
+							{
+								"activity": "Copy data1",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": {
+								"value": "https://prod-34.eastus.logic.azure.com:443/workflows/65fd13933fd04bff9511f6d94968aa6b/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Wj9IaJ2Dp5Yi_jV_rCyVUTxHxj32TbV95fyJSGBp2h8\n",
+								"type": "Expression"
+							},
+							"method": "POST",
+							"headers": {
+								"Content-Type": {
+									"value": "application/json",
+									"type": "Expression"
+								}
+							},
+							"body": {
+								"message": "@{activity('Copy1').output.dataWritten}",
+								"dataFactoryName": "@{pipeline().DataFactory}",
+								"pipelineName": "@{pipeline().Pipeline}",
+								"receiver": "@pipeline().parameters.receiver"
+							}
+						}
+					},
+					{
+						"name": "SendFailureEmailActivity",
+						"type": "WebActivity",
+						"dependsOn": [
+							{
+								"activity": "Copy data1",
+								"dependencyConditions": [
+									"Failed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"url": "https://prod-34.eastus.logic.azure.com:443/workflows/65fd13933fd04bff9511f6d94968aa6b/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Wj9IaJ2Dp5Yi_jV_rCyVUTxHxj32TbV95fyJSGBp2h8",
+							"method": "POST",
+							"headers": {
+								"Content-Type": "application/json"
+							},
+							"body": {
+								"message": "@{activity('Copy1').error.message}",
+								"dataFactoryName": "@{pipeline().DataFactory}",
+								"pipelineName": "@{pipeline().Pipeline}",
+								"receiver": "@pipeline().parameters.receiver"
+							}
+						}
+					}
+				],
+				"parameters": {
+					"sourceBlobContainer": {
+						"type": "string"
+					},
+					"sinkBlobContainer": {
+						"type": "string"
+					},
+					"receiver": {
+						"type": "string"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/SourceBlobDataset')]",
+				"[concat(variables('factoryId'), '/datasets/SinkBlobDataset')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/CopyPipelineViaVNet')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "CopyFromBlobToSql",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "DelimitedTextSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "DelimitedTextReadSettings"
+								}
+							},
+							"sink": {
+								"type": "AzureSqlSink"
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "SourceBlobDataset",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "OutputSqlDataset",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					}
+				],
+				"annotations": [],
+				"lastPublishTime": "2021-06-22T09:35:04Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/SourceBlobDataset')]",
+				"[concat(variables('factoryId'), '/datasets/OutputSqlDataset')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/GetTableListAndTriggerCopyData')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "LookupTableList",
+						"description": "Retrieve the table list from my database",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "SELECT TABLE_SCHEMA, TABLE_NAME FROM information_schema.TABLES WHERE TABLE_TYPE = 'BASE TABLE' and TABLE_SCHEMA = 'SalesLT' and TABLE_NAME <> 'ProductModel'",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "AzureSqlDatabaseDataset",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "TriggerCopy",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "LookupTableList",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "IterateAndCopySQLTables",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": false,
+							"parameters": {
+								"tableList": {
+									"value": "@activity('LookupTableList').output.value",
+									"type": "Expression"
+								}
+							}
+						}
+					}
+				],
+				"annotations": [],
+				"lastPublishTime": "2021-06-22T07:58:27Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/AzureSqlDatabaseDataset')]",
+				"[concat(variables('factoryId'), '/pipelines/IterateAndCopySQLTables')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/IncrementalCopyPipeline')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "LookupOldWaterMarkActivity",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "WatermarkDataset",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "LookupNewWaterMarkActivity",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "select MAX(LastModifytime) as NewWatermarkvalue from data_source_table",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "SourceDataset",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						}
+					},
+					{
+						"name": "IncrementalCopyActivity",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "LookupOldWaterMarkActivity",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							},
+							{
+								"activity": "LookupNewWaterMarkActivity",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": {
+									"value": "select * from data_source_table where LastModifytime > '@{activity('LookupOldWaterMarkActivity').output.firstRow.WatermarkValue}' and LastModifytime <= '@{activity('LookupNewWaterMarkActivity').output.firstRow.NewWatermarkvalue}'",
+									"type": "Expression"
+								},
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "DelimitedTextSink",
+								"storeSettings": {
+									"type": "AzureBlobStorageWriteSettings"
+								},
+								"formatSettings": {
+									"type": "DelimitedTextWriteSettings",
+									"quoteAllText": true,
+									"fileExtension": ".txt"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "SourceDataset",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "SinkDataset",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					},
+					{
+						"name": "StoredProceduretoWriteWatermarkActivity",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "IncrementalCopyActivity",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "usp_write_watermark",
+							"storedProcedureParameters": {
+								"LastModifiedtime": {
+									"value": {
+										"value": "@activity('LookupNewWaterMarkActivity').output.firstRow.NewWatermarkvalue",
+										"type": "Expression"
+									},
+									"type": "DateTime"
+								},
+								"TableName": {
+									"value": {
+										"value": "@activity('LookupOldWaterMarkActivity').output.firstRow.TableName",
+										"type": "Expression"
+									},
+									"type": "String"
+								}
+							}
+						},
+						"linkedServiceName": {
+							"referenceName": "AzureSqlDatabaseLinkedService",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"annotations": [],
+				"lastPublishTime": "2021-06-21T06:42:59Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/WatermarkDataset')]",
+				"[concat(variables('factoryId'), '/datasets/SourceDataset')]",
+				"[concat(variables('factoryId'), '/datasets/SinkDataset')]",
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabaseLinkedService')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/IterateAndCopySQLTables')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "IterateSQLTables",
+						"type": "ForEach",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@pipeline().parameters.tableList",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Copy data1",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "AzureSqlSource",
+											"sqlReaderQuery": {
+												"value": "SELECT * FROM [@{item().TABLE_SCHEMA}].[@{item().TABLE_NAME}]",
+												"type": "Expression"
+											},
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "SqlDWSink",
+											"preCopyScript": {
+												"value": "IF EXISTS (SELECT * FROM [@{item().TABLE_SCHEMA}].[@{item().TABLE_NAME}) TRUNCATE TABLE [@{item().TABLE_SCHEMA}].[@{item().TABLE_NAME}]",
+												"type": "Expression"
+											},
+											"allowPolyBase": true,
+											"polyBaseSettings": {
+												"rejectValue": 0,
+												"rejectType": "value",
+												"useTypeDefault": false
+											},
+											"disableMetricsCollection": false
+										},
+										"enableStaging": true,
+										"stagingSettings": {
+											"linkedServiceName": {
+												"referenceName": "AzureStorageLinkedService",
+												"type": "LinkedServiceReference"
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "AzureSqlDatabaseDataset",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "AzureSqlDWDataset",
+											"type": "DatasetReference",
+											"parameters": {
+												"DWTableName": {
+													"value": "@item().TABLE_NAME",
+													"type": "Expression"
+												},
+												"DWSchema": {
+													"value": "@item().TABLE_SCHEMA",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					}
+				],
+				"parameters": {
+					"tableList": {
+						"type": "array"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2021-06-22T08:02:39Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/AzureSqlDatabaseDataset')]",
+				"[concat(variables('factoryId'), '/datasets/AzureSqlDWDataset')]",
+				"[concat(variables('factoryId'), '/linkedServices/AzureStorageLinkedService')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlDWDataset')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDWLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"DWTableName": {
+						"type": "string"
+					},
+					"DWSchema": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": {
+						"value": "@dataset().DWSchema",
+						"type": "Expression"
+					},
+					"table": {
+						"value": "@dataset().DWTableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDWLinkedService')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlDatabaseDataset')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDatabaseLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "CustomerID",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "NameStyle",
+						"type": "bit"
+					},
+					{
+						"name": "Title",
+						"type": "nvarchar"
+					},
+					{
+						"name": "FirstName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "MiddleName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "LastName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Suffix",
+						"type": "nvarchar"
+					},
+					{
+						"name": "CompanyName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "SalesPerson",
+						"type": "nvarchar"
+					},
+					{
+						"name": "EmailAddress",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Phone",
+						"type": "nvarchar"
+					},
+					{
+						"name": "PasswordHash",
+						"type": "varchar"
+					},
+					{
+						"name": "PasswordSalt",
+						"type": "varchar"
+					},
+					{
+						"name": "rowguid",
+						"type": "uniqueidentifier"
+					},
+					{
+						"name": "ModifiedDate",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": {
+						"value": "dummyName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabaseLinkedService')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureStorageLinkedService')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureStorageLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"container": "adftutorial"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureStorageLinkedService')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/OutputSqlDataset')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "VNetAzureSqlDatabaseLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "ID",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "FirstName",
+						"type": "varchar"
+					},
+					{
+						"name": "LastName",
+						"type": "varchar"
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "emp"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/VNetAzureSqlDatabaseLinkedService')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SinkBlobDataset')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureStorageLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": {
+							"value": "@CONCAT(pipeline().RunId, '.txt')",
+							"type": "Expression"
+						},
+						"folderPath": {
+							"value": "@pipeline().parameters.sinkBlobContainer",
+							"type": "Expression"
+						},
+						"container": "adfv2branch"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureStorageLinkedService')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SinkDataset')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureStorageLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": {
+							"value": "@CONCAT('Incremental-', pipeline().RunId, '.txt')",
+							"type": "Expression"
+						},
+						"folderPath": "incrementalcopy",
+						"container": "adftutorial"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureStorageLinkedService')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SourceBlobDataset')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureStorageLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": "emp.txt",
+						"folderPath": {
+							"value": "@pipeline().parameters.sourceBlobContainer",
+							"type": "Expression"
+						},
+						"container": "adftutorial"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"type": "String"
+					},
+					{
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureStorageLinkedService')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDatabaseLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "PersonID",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "Name",
+						"type": "varchar"
+					},
+					{
+						"name": "LastModifytime",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "data_source_table"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabaseLinkedService')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/WatermarkDataset')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "AzureSqlDatabaseLinkedService",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [
+					{
+						"name": "TableName",
+						"type": "varchar"
+					},
+					{
+						"name": "WatermarkValue",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "watermarktable"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/AzureSqlDatabaseLinkedService')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlDWLinkedService')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureSqlDWLinkedService_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureSqlDatabaseLinkedService')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureSqlDatabaseLinkedService_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/AzureStorageLinkedService')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"connectionString": "[parameters('AzureStorageLinkedService_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/VNetAzureSqlDatabaseLinkedService')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('VNetAzureSqlDatabaseLinkedService_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "integrationRuntime1",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/integrationRuntime1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/VNetAzureStorageLinkedService')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"connectionString": "[parameters('VNetAzureStorageLinkedService_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "integrationRuntime1",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/integrationRuntimes/integrationRuntime1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/CentralUSIR')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "Central US",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 10,
+							"cleanup": false
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/integrationRuntime1')]",
+			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "East US",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 10,
+							"cleanup": false
+						}
+					}
+				},
+				"managedVirtualNetwork": {
+					"type": "ManagedVirtualNetworkReference",
+					"referenceName": "default"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/managedVirtualNetworks/default')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/default')]",
+			"type": "Microsoft.DataFactory/factories/managedVirtualNetworks",
+			"apiVersion": "2018-06-01",
+			"properties": {},
+			"dependsOn": []
+		}
+	]
+}
