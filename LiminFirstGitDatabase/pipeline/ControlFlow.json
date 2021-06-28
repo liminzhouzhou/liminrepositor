@@ -135,13 +135,16 @@
 		],
 		"parameters": {
 			"sourceBlobContainer": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "adftutorial/adfv2branch/input"
 			},
 			"sinkBlobContainer": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "adftutorial/adfv2branch/output"
 			},
 			"receiver": {
-				"type": "string"
+				"type": "string",
+				"defaultValue": "t-liminzhou@microsoft.com"
 			}
 		},
 		"annotations": []

@@ -14,8 +14,7 @@
 				"folderPath": {
 					"value": "@pipeline().parameters.sourceBlobContainer",
 					"type": "Expression"
-				},
-				"container": "adftutorial"
+				}
 			},
 			"columnDelimiter": ",",
 			"escapeChar": "\\",
